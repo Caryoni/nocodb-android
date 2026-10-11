@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f5f1">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<script>navigator.serviceWorker&&navigator.serviceWorker.register("sw.js").catch(()=>{})</script>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<script>navigator.serviceWorker&&navigator.serviceWorker.register("sw.js").catch(()=>{})</script>
+<title>Noco 数据</title>
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1f2421; --ink2:#8a8f8c; --line:#ecebe6;
+  --green:#3e7d5c; --green-soft:#e6f2ea; --pink-soft:#fbe9ec; --red:#c4455c;
+  --blue-soft:#e7effa; --blue:#3d6cb4; --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Noto Sans SC",Roboto,sans-serif;padding-bottom:76px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 6px}
+.topbar .brand{font-weight:800;font-size:17px;display:flex;align-items:center;gap:8px}
+.topbar .brand .dot{width:22px;height:22px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.hero{padding:10px 18px 4px}
+.hero h1{font-size:24px;font-weight:800}
+.hero p{color:var(--ink2);font-size:13px;margin-top:3px}
+.wrap{padding:12px 18px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin:10px 0 10px}
+.section-head h2{font-size:16px;font-weight:700}
+.section-head a{color:var(--green);font-size:13px;text-decoration:none;font-weight:600}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.hero-card{background:linear-gradient(135deg,#e9f5ee,#dfeede);border:1px solid #dcebe1}
+.hero-card .kicker{display:flex;align-items:center;gap:8px;color:var(--green);font-size:12px;font-weight:700}
+.hero-card h3{font-size:19px;margin:8px 0 4px;font-weight:800}
+.hero-card .meta{color:#5c7264;font-size:12px}
+.hero-card .btn{margin-top:12px;display:inline-block;background:var(--green);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:14px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.stat .num{font-size:26px;font-weight:800}
+.stat .lbl{color:var(--ink2);font-size:12px;margin-top:2px}
+/* search + chips */
+.search{display:flex;align-items:center;gap:8px;background:#eceee9;border-radius:12px;padding:10px 12px;margin:4px 18px 10px}
+.search input{border:none;background:transparent;outline:none;flex:1;font-size:14px;color:var(--ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 18px 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:7px 14px;border-radius:999px;background:#eceee9;color:#666;font-size:13px;border:none;font-weight:600}
+.chip.on{background:var(--green);color:#fff}
+/* list */
+.row{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.datebox{min-width:44px;text-align:center;background:#f1f4ef;border-radius:12px;padding:8px 6px}
+.datebox .d{font-size:18px;font-weight:800;line-height:1.1}
+.datebox .m{font-size:10px;color:var(--ink2)}
+.row .body{flex:1;min-width:0}
+.row .time{font-size:11px;color:var(--ink2)}
+.row .title{font-size:15px;font-weight:700;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:12px;color:var(--ink2)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;margin-top:6px}
+.tag.g{background:var(--green-soft);color:var(--green)}
+.tag.r{background:var(--pink-soft);color:var(--red)}
+.tag.b{background:var(--blue-soft);color:var(--blue)}
+.tag.n{background:#efe9df;color:#8a6d3b}
+.field{font-size:12px;color:var(--ink2);margin-top:2px}
+.field b{color:var(--ink);font-weight:600}
+/* table picker */
+.tbl-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);background:var(--card);margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer}
+.tbl-item .ic{width:38px;height:38px;border-radius:11px;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:17px}
+.tbl-item .t{font-weight:700;font-size:15px}
+.tbl-item .s{font-size:12px;color:var(--ink2);margin-top:2px}
+/* detail */
+.kv{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);gap:16px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--ink2);font-size:13px;flex-shrink:0}
+.kv .v{font-size:14px;font-weight:600;text-align:right;word-break:break-all}
+/* nav */
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;padding:8px 6px calc(10px + env(safe-area-inset-bottom))}
+.nav button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:#9aa09c;padding:4px 0;cursor:pointer}
+.nav button.on{color:var(--green);font-weight:700}
+.nav button .n{position:relative;font-size:20px}
+.nav button.on .n{filter:drop-shadow(0 0 6px rgba(62,125,92,.45))}
+/* misc */
+.empty{text-align:center;color:var(--ink2);padding:44px 20px;font-size:14px}
+.loadmore{display:block;margin:6px auto 16px;background:#fff;border:1px solid var(--line);color:var(--green);font-weight:700;border-radius:10px;padding:9px 22px}
+input.tf,textarea.tf{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px;font-family:inherit}
+.label{font-size:12px;color:var(--ink2);margin-bottom:4px;font-weight:600}
+.okbtn{width:100%;background:var(--green);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;margin-top:6px}
+.hint{font-size:12px;color:var(--ink2);margin-top:10px;line-height:1.6}
+.hidden{display:none!important}
+.spin{margin:20px auto;width:24px;height:24px;border:3px solid var(--green-soft);border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ============ 首页 ============ -->
+<div id="page-home">
+  <div class="topbar">
+    <div class="brand"><span class="dot">N</span> Noco 数据</div>
+    <div class="avatar" id="home-avatar">N</div>
+  </div>
+  <div class="hero">
+    <h1>你好 👋</h1>
+    <p id="home-sub">连接你的 NocoDB，随时查询数据</p>
+  </div>
+  <div class="wrap">
+    <div class="card hero-card">
+      <div class="kicker">🗄 最近使用</div>
+      <h3 id="last-title">尚未使用</h3>
+      <div class="meta" id="last-meta">从下方表格列表开始查询吧</div>
+      <button class="btn" id="btn-last" onclick="openLast()">打开 →</button>
+    </div>
+    <div class="grid2" id="home-stats"></div>
+  </div>
+  <div class="section-head" style="padding:0 18px"><h2>📊 数据表</h2><a href="javascript:go('tables')">全部 →</a></div>
+  <div class="wrap" id="home-tables" style="padding-top:0"></div>
+</div>
+
+<!-- ============ 表格页 ============ -->
+<div id="page-tables" class="hidden">
+  <div class="topbar"><div class="brand"><span class="dot">N</span> 数据表</div><div class="avatar" onclick="go('settings')">⚙</div></div>
+  <div class="search">🔍<input id="tbl-search" placeholder="搜索表名..." oninput="renderTables()"></div>
+  <div class="wrap" style="padding-top:4px" id="tbl-list"></div>
+</div>
+
+<!-- ============ 查询页 ============ -->
+<div id="page-query" class="hidden">
+  <div class="topbar">
+    <div class="brand" onclick="go('tables')">← <span id="q-title" style="margin-left:6px">数据</span></div>
+  </div>
+  <div class="search">🔍<input id="q-search" placeholder="搜索记录..." oninput="debSearch()"></div>
+  <div class="chips" id="q-chips"></div>
+  <div class="wrap" id="q-list" style="padding-top:4px"></div>
+  <div id="q-more"></div>
+</div>
+
+<!-- ============ 详情 ============ -->
+<div id="page-detail" class="hidden">
+  <div class="topbar">
+    <div class="brand" onclick="go('query')">← <span style="margin-left:6px">记录详情</span></div>
+  </div>
+  <div class="wrap" id="detail-body"></div>
+</div>
+
+<!-- ============ 设置 ============ -->
+<div id="page-settings" class="hidden">
+  <div class="topbar">
+    <div class="brand" onclick="go('home')">← <span style="margin-left:6px">设置</span></div>
+  </div>
+  <div class="wrap">
+    <div class="card">
+      <div class="label">NocoDB 地址</div>
+      <input class="tf" id="s-url" placeholder="http://192.168.1.100:8080">
+      <div class="label">API Token（可选，推荐）</div>
+      <input class="tf" id="s-token" type="password" placeholder="xc-token：在 NocoDB → Team & Settings → API Tokens 生成">
+      <div class="label">默认项目（BaseId，可选）</div>
+      <input class="tf" id="s-base" placeholder="留空自动获取第一个项目">
+      <button class="okbtn" onclick="saveCfg()">保存并测试连接</button>
+      <div class="hint">
+        · 地址填 NAS 的 NocoDB 访问地址（含端口），手机需与 NAS 同一局域网或可达的公网地址。<br>
+        · 若 NocoDB 通过 HTTPS 反代访问，需证书有效，否则浏览器会拦截。<br>
+        · Token 只保存在本机浏览器 localStorage，不上传。
+      </div>
+    </div>
+    <div style="margin-top:14px" id="cfg-status"></div>
+  </div>
+</div>
+
+<!-- ============ 底部导航 ============ -->
+<div class="nav">
+  <button id="nav-home" class="on" onclick="go('home')"><span class="n">🏠</span>首页</button>
+  <button id="nav-tables" onclick="go('tables')"><span class="n">🗂</span>数据表</button>
+  <button id="nav-query" onclick="go('query')"><span class="n">🔍</span>查询</button>
+  <button id="nav-settings" onclick="go('settings')"><span class="n">⚙️</span>设置</button>
+</div>
+
+<script>
+const API = {
+  get url(){ return (localStorage.nc_url||'').replace(/\/+$/,'') },
+  get token(){ return localStorage.nc_token||'' },
+  get base(){ return localStorage.nc_base||'' },
+  hdr(){ const h={}; if(this.token) h['xc-token']=this.token; return h }
+};
+let CUR={table:null,title:null,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null,tableId:null};
+let TABLES=[];
+
+function go(p){
+  for(const k of ['home','tables','query','detail','settings'])
+    document.getElementById('page-'+k).classList.toggle('hidden', k!==p);
+  for(const k of ['home','tables','query','settings'])
+    document.getElementById('nav-'+k).classList.toggle('on', k===p);
+  if(p==='tables' && !TABLES.length) loadTables();
+  if(p==='home') renderHome();
+  if(p==='query' && CUR.tableId && !CUR.rows.length) loadRows();
+}
+async function api(path){
+  const r = await fetch(API.url+'/api/v2/'+path, {headers:API.hdr()});
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,200));
+  return r.json();
+}
+function saveCfg(){
+  localStorage.nc_url=document.getElementById('s-url').value.trim();
+  localStorage.nc_token=document.getElementById('s-token').value.trim();
+  localStorage.nc_base=document.getElementById('s-base').value.trim();
+  const st=document.getElementById('cfg-status');
+  st.innerHTML='<div class="spin"></div>';
+  loadTables().then(ts=>{
+    st.innerHTML='<div class="card"><b style="color:var(--green)">✓ 连接成功</b><div class="hint">共发现 '+ts.length+' 张表，回首页开始查询。</div></div>';
+    go('home');
+  }).catch(e=>{
+    st.innerHTML='<div class="card" style="border:1px solid var(--pink-soft)"><b style="color:var(--red)">✗ 连接失败</b><div class="hint">'+esc(e.message)+'</div></div>';
+  });
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+async function loadTables(){
+  let baseId = API.base;
+  if(!baseId){
+    const bl = await api('meta/bases');
+    baseId = bl.list?.[0]?.id; localStorage.nc_base = baseId||'';
+  }
+  const tl = await api('meta/bases/'+baseId+'/tables');
+  TABLES = (tl.list||[]).map(t=>({id:t.id, name:t.title, meta:t.meta||{}}));
+  renderTables(); renderHomeTables();
+  return TABLES;
+}
+function renderTables(){
+  const q=(document.getElementById('tbl-search').value||'').toLowerCase();
+  const list = TABLES.filter(t=>t.name.toLowerCase().includes(q));
+  document.getElementById('tbl-list').innerHTML = list.length ? list.map(t=>
+    '<div class="tbl-item" onclick="openTable(\''+t.id+'\',\''+esc(t.name)+'\')">'+
+    '<div class="ic">▦</div><div><div class="t">'+esc(t.name)+'</div>'+
+    '<div class="s">'+(t.meta?.rows??'点击查询记录')+'</div></div></div>'
+  ).join('') : '<div class="empty">没有匹配的表</div>';
+}
+function renderHomeTables(){
+  document.getElementById('home-tables').innerHTML = TABLES.slice(0,4).map(t=>
+    '<div class="tbl-item" onclick="openTable(\''+t.id+'\',\''+esc(t.name)+'\')">'+
+    '<div class="ic">▦</div><div><div class="t">'+esc(t.name)+'</div>'+
+    '<div class="s">'+(t.meta?.rows??'')+'</div></div></div>'
+  ).join('') || '<div class="empty">请先在设置中连接 NocoDB</div>';
+}
+async function openTable(id,title){
+  CUR={tableId:id,table:title,title,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null};
+  document.getElementById('q-title').textContent=title;
+  document.getElementById('q-list').innerHTML='<div class="spin"></div>';
+  document.getElementById('q-chips').innerHTML='';
+  go('query');
+  localStorage.nc_last=JSON.stringify({id,title});
+  try{
+    const fl = await api('meta/tables/'+id+'/fields');
+    CUR.fields = (fl.list||[]).filter(f=>!['Formula','Rollup','Links','Lookup','Barcode','QRCode'].includes(f.uidt));
+    CUR.pk = (fl.list||[]).find(f=>f.pv)?.title || (fl.list||[]).find(f=>f.pk)?.title || 'Id';
+    renderChips();
+    await loadRows(true);
+  }catch(e){ document.getElementById('q-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>' }
+}
+function renderChips(){
+  const fs=CUR.fields.slice(0,8);
+  document.getElementById('q-chips').innerHTML =
+    '<button class="chip on" onclick="setFk(this,null)">全部字段</button>'+
+    fs.map((f,i)=>'<button class="chip" onclick="setFk(this,\''+esc(f.title)+'\')">'+esc(f.title)+'</button>').join('');
+}
+function setFk(btn,field){
+  document.querySelectorAll('#q-chips .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on'); CUR.fk=field; loadRows(true);
+}
+let debT;
+function debSearch(){ clearTimeout(debT); debT=setTimeout(()=>loadRows(true),400) }
+async function loadRows(reset){
+  if(reset){CUR.offset=0;CUR.rows=[];document.getElementById('q-list').innerHTML='<div class="spin"></div>';document.getElementById('q-more').innerHTML=''}
+  CUR.query=document.getElementById('q-search').value||'';
+  try{
+    let u='tables/'+CUR.tableId+'/rows?limit=25&offset='+CUR.offset;
+    if(CUR.query) u+='&where=('+encodeURIComponent(CUR.fk||CUR.pk)+',like,'+encodeURIComponent('%'+CUR.query+'%')+')';
+    const d=await api(u);
+    CUR.rows=CUR.rows.concat(d.list||[]);
+    CUR.offset+=25;
+    renderRows(!(d.pageInfo&&(d.pageInfo.isLastPage??!d.pageInfo.hasNextPage)) && (d.list||[]).length>0);
+  }catch(e){ document.getElementById('q-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>' }
+}
+function renderRows(hasMore){
+  const el=document.getElementById('q-list');
+  if(!CUR.rows.length){el.innerHTML='<div class="empty">没有找到记录</div>';document.getElementById('q-more').innerHTML='';return}
+  el.innerHTML=CUR.rows.map(r=>{
+    const main=CUR.fk? r[CUR.fk] : (r[CUR.pk]??Object.values(r)[0]);
+    const others=CUR.fields.filter(f=>f.title!==(CUR.fk||CUR.pk)&&f.title!==CUR.pk&&r[f.title]!==null&&r[f.title]!=='').slice(0,3);
+    const status=others[0], time=others[1];
+    const cls=classify(status?.value??status);
+    return '<div class="card row" onclick="openDetail(\''+esc(JSON.stringify(r))+'\')">'+
+      '<div class="datebox"><div class="d">#</div><div class="m">'+esc(CUR.rows.indexOf(r)+1)+'</div></div>'+
+      '<div class="body">'+
+      (time?'<div class="time">'+esc(time.value??time)+'</div>':'')+
+      '<div class="title">'+esc(fmt(main))+'</div>'+
+      '<div class="sub">'+esc(status?.title||'')+(others[2]?' · '+esc(fmt(others[2].value??others[2])):'')+'</div>'+
+      (status?'<span class="tag '+cls+'">'+esc(fmt(status.value??status))+'</span>':'')+
+      '</div></div>';
+  }).join('');
+  document.getElementById('q-more').innerHTML=hasMore?'<button class="loadmore" onclick="loadRows(false)">加载更多</button>':'';
+}
+function classify(v){
+  const s=String(v??'').toLowerCase();
+  if(/完成|已完成|done|active|正常|ok|paid|已付/.test(s))return 'g';
+  if(/逾期|超时|失败|失败|overdue|fail|error|退|拒/.test(s))return 'r';
+  if(/进行|处理|pending|progress|待/.test(s))return 'b';
+  return 'n';
+}
+function fmt(v){
+  if(v===null||v===undefined)return '';
+  if(typeof v==='object')return v.title??v.name??JSON.stringify(v).slice(0,40);
+  if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(v))return v.slice(0,10)+' '+v.slice(11,16);
+  return String(v);
+}
+function openDetail(rowJson){
+  const r=JSON.parse(rowJson.replace(/&quot;/g,'"'));
+  document.getElementById('detail-body').innerHTML='<div class="card">'+
+    Object.entries(r).filter(([k])=>k!=='__meta').map(([k,v])=>
+      '<div class="kv"><span class="k">'+esc(k)+'</span><span class="v">'+esc(fmt(v))+'</span></div>').join('')+'</div>';
+  go('detail');
+}
+function renderHome(){
+  const last=localStorage.nc_last?JSON.parse(localStorage.nc_last):null;
+  if(last){
+    document.getElementById('last-title').textContent=last.title;
+    document.getElementById('last-meta').textContent='上次查询的数据表';
+    document.getElementById('btn-last').style.display='inline-block';
+  } else document.getElementById('btn-last').style.display='none';
+  document.getElementById('home-sub').textContent=API.url?('已连接 '+API.url.replace(/^https?:\/\//,'')):'未连接，请先到「设置」配置';
+  document.getElementById('home-stats').innerHTML=
+    '<div class="card stat"><div class="num">'+TABLES.length+'</div><div class="lbl">数据表</div></div>'+
+    '<div class="card stat"><div class="num">'+(API.token?'✓':'—')+'</div><div class="lbl">API Token</div></div>';
+}
+function openLast(){ const l=localStorage.nc_last?JSON.parse(localStorage.nc_last):null; if(l)openTable(l.id,l.title) }
+(function init(){
+  document.getElementById('s-url').value=API.url;
+  document.getElementById('s-token').value=API.token;
+  document.getElementById('s-base').value=API.base;
+  document.getElementById('home-avatar').textContent='N';
+  if(API.url) loadTables().catch(e=>{document.getElementById('cfg-status').outerHTML=''});
+  renderHome(); renderHomeTables();
+})();
+</script>
+</body>
+</html>
