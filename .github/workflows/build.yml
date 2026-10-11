@@ -16,10 +16,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build debug APK
+      - name: Install Gradle 8.4
         run: |
-          gradle wrapper --gradle-version 8.4 || true
-          ./gradlew assembleDebug --no-daemon
+          curl -sL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.4-bin.zip
+          unzip -q /tmp/gradle.zip -d /opt
+          echo "/opt/gradle-8.4/bin" >> $GITHUB_PATH
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
