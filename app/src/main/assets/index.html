@@ -180,8 +180,15 @@ const API = {
   get base(){ return localStorage.nc_base||'' },
   hdr(){ const h={}; if(this.token) h['xc-token']=this.token; return h }
 };
-let CUR={table:null,title:null,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null,tableId:null};
+let CUR={table:null,title:null,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null,tableId:null,rowsPath:null};
 let TABLES=[];
+let BASE_ID='';
+const ROW_PATHS=[
+  t=>'tables/'+t+'/rows',                                   // NocoDB v2 (新版)
+  t=>'db/data/v2/'+localStorage.nc_base+'/'+t,              // 旧版 v1
+  t=>'db/data/'+localStorage.nc_base+'/'+t                  // 更旧版
+];
+let ROW_PATH_IDX=0;
 
 function go(p){
   for(const k of ['home','tables','query','detail','settings'])
@@ -203,9 +210,16 @@ function saveCfg(){
   localStorage.nc_base=document.getElementById('s-base').value.trim();
   const st=document.getElementById('cfg-status');
   st.innerHTML='<div class="spin"></div>';
-  loadTables().then(ts=>{
-    st.innerHTML='<div class="card"><b style="color:var(--green)">✓ 连接成功</b><div class="hint">共发现 '+ts.length+' 张表，回首页开始查询。</div></div>';
-    go('home');
+  loadTables().then(async ts=>{
+    let diag=[];
+    if(ts.length&&localStorage.nc_base){
+      for(let i=0;i<ROW_PATHS.length;i++){
+        try{ await api(ROW_PATHS[i](ts[0].id)+'?limit=1'); diag.push('✓ /api/v2/'+ROW_PATHS[i](ts[0].id)); ROW_PATH_IDX=i; }
+        catch(e){ diag.push('✗ /api/v2/'+ROW_PATHS[i](ts[0].id)); }
+      }
+    }
+    st.innerHTML='<div class="card"><b style="color:var(--green)">✓ 连接成功</b><div class="hint">共 '+ts.length+' 张表。<br>'+diag.join('<br>')+'</div></div>';
+    setTimeout(()=>go('home'),1200);
   }).catch(e=>{
     st.innerHTML='<div class="card" style="border:1px solid var(--pink-soft)"><b style="color:var(--red)">✗ 连接失败</b><div class="hint">'+esc(e.message)+'</div></div>';
   });
@@ -240,7 +254,7 @@ function renderHomeTables(){
   ).join('') || '<div class="empty">请先在设置中连接 NocoDB</div>';
 }
 async function openTable(id,title){
-  CUR={tableId:id,table:title,title,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null};
+  CUR={tableId:id,table:title,title,fields:[],pk:'Id',rows:[],offset:0,query:'',fk:null,rowsPath:null};
   document.getElementById('q-title').textContent=title;
   document.getElementById('q-list').innerHTML='<div class="spin"></div>';
   document.getElementById('q-chips').innerHTML='';
@@ -270,7 +284,16 @@ async function loadRows(reset){
   if(reset){CUR.offset=0;CUR.rows=[];document.getElementById('q-list').innerHTML='<div class="spin"></div>';document.getElementById('q-more').innerHTML=''}
   CUR.query=document.getElementById('q-search').value||'';
   try{
-    let u='tables/'+CUR.tableId+'/rows?limit=25&offset='+CUR.offset;
+    // 自动探测可用的 rows 接口路径
+    if(CUR.rowsPath===null){
+      for(let i=0;i<ROW_PATHS.length;i++){
+        try{
+          const test=await api(ROW_PATHS[i](CUR.tableId)+'?limit=1');
+          ROW_PATH_IDX=i; CUR.rowsPath=ROW_PATHS[i](CUR.tableId); break;
+        }catch(e){ if(i===ROW_PATHS.length-1) throw e; }
+      }
+    }
+    let u=CUR.rowsPath+'?limit=25&offset='+CUR.offset;
     if(CUR.query) u+='&where=('+encodeURIComponent(CUR.fk||CUR.pk)+',like,'+encodeURIComponent('%'+CUR.query+'%')+')';
     const d=await api(u);
     CUR.rows=CUR.rows.concat(d.list||[]);
