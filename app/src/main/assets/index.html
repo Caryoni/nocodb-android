@@ -186,9 +186,24 @@ let BASE_ID='';
 const ROW_PATHS=[
   t=>'tables/'+t+'/rows',                                   // NocoDB v2 (新版)
   t=>'db/data/v2/'+localStorage.nc_base+'/'+t,              // 旧版 v1
-  t=>'db/data/'+localStorage.nc_base+'/'+t                  // 更旧版
+  t=>'db/data/'+localStorage.nc_base+'/'+t,                 // 更旧版
+  // 以下走 /api/v1 前缀（老版本 NocoDB 0.x/1.x 的数据接口不在 /api/v2 下）
+  t=>'@@/api/v1/db/data/'+localStorage.nc_base+'/'+t,
+  t=>'@@/api/v1/db/data/noco/'+localStorage.nc_base+'/'+t,
+  t=>'@@/api/v1/db/data/noco/'+localStorage.nc_base+'/'+t+'/views/'+t
 ];
 let ROW_PATH_IDX=0;
+// @@ 表示替换整个前缀（不用 /api/v2）
+function rowsUrl(pathTemplate,tableId){
+  const p=pathTemplate(tableId);
+  if(p.startsWith('@@')) return API.url+p.slice(2);
+  return API.url+'/api/v2/'+p;
+}
+async function fetchJson(url){
+  const r=await fetch(url,{headers:API.hdr()});
+  if(!r.ok) throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,120));
+  return r.json();
+}
 
 function go(p){
   for(const k of ['home','tables','query','detail','settings'])
@@ -214,8 +229,8 @@ function saveCfg(){
     let diag=[];
     if(ts.length&&localStorage.nc_base){
       for(let i=0;i<ROW_PATHS.length;i++){
-        try{ await api(ROW_PATHS[i](ts[0].id)+'?limit=1'); diag.push('✓ /api/v2/'+ROW_PATHS[i](ts[0].id)); ROW_PATH_IDX=i; }
-        catch(e){ diag.push('✗ /api/v2/'+ROW_PATHS[i](ts[0].id)); }
+        try{ await fetchJson(rowsUrl(ROW_PATHS[i],ts[0].id)+'?limit=1'); diag.push('✓ '+rowsUrl(ROW_PATHS[i],ts[0].id).replace(API.url,'')); ROW_PATH_IDX=i; }
+        catch(e){ diag.push('✗ '+rowsUrl(ROW_PATHS[i],ts[0].id).replace(API.url,'')+' ('+String(e.message).slice(0,30)+')'); }
       }
     }
     st.innerHTML='<div class="card"><b style="color:var(--green)">✓ 连接成功</b><div class="hint">共 '+ts.length+' 张表。<br>'+diag.join('<br>')+'</div></div>';
@@ -286,12 +301,14 @@ async function loadRows(reset){
   try{
     // 自动探测可用的 rows 接口路径
     if(CUR.rowsPath===null){
+      let found=false, lastErr='';
       for(let i=0;i<ROW_PATHS.length;i++){
         try{
-          const test=await api(ROW_PATHS[i](CUR.tableId)+'?limit=1');
-          ROW_PATH_IDX=i; CUR.rowsPath=ROW_PATHS[i](CUR.tableId); break;
-        }catch(e){ if(i===ROW_PATHS.length-1) throw e; }
+          await fetchJson(rowsUrl(ROW_PATHS[i],CUR.tableId)+'?limit=1');
+          ROW_PATH_IDX=i; CUR.rowsPath=rowsUrl(ROW_PATHS[i],CUR.tableId); found=true; break;
+        }catch(e){ lastErr=e.message; if(i===ROW_PATHS.length-1) throw new Error('所有接口路径均失败：'+lastErr); }
       }
+      if(!found) throw new Error(lastErr);
     }
     let u=CUR.rowsPath+'?limit=25&offset='+CUR.offset;
     if(CUR.query) u+='&where=('+encodeURIComponent(CUR.fk||CUR.pk)+',like,'+encodeURIComponent('%'+CUR.query+'%')+')';
