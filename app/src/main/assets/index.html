@@ -185,14 +185,11 @@ let TABLES=[];
 let BASE_ID='';
 const ROW_PATHS=[
   t=>'tables/'+t+'/rows',                                   // NocoDB v2 (新版)
-  t=>'db/data/v2/'+localStorage.nc_base+'/'+t,              // 旧版 v1
-  t=>'db/data/'+localStorage.nc_base+'/'+t,                 // 更旧版
-  // 以下走 /api/v1 前缀（老版本 NocoDB 0.x/1.x 的数据接口不在 /api/v2 下）
-  t=>'@@/api/v1/db/data/'+localStorage.nc_base+'/'+t,
-  t=>'@@/api/v1/db/data/noco/'+localStorage.nc_base+'/'+t,
-  t=>'@@/api/v1/db/data/noco/'+localStorage.nc_base+'/'+t+'/views/'+t
+  t=>'@@/api/v1/db/data/noco/'+localStorage.nc_base+'/'+t,  // NocoDB v1 (你的版本 ✓)
+  t=>'@@/api/v1/db/data/v2/'+localStorage.nc_base+'/'+t,    // 旧版 v1
+  t=>'@@/api/v1/db/data/'+localStorage.nc_base+'/'+t        // 更旧版
 ];
-let ROW_PATH_IDX=0;
+let ROW_PATH_IDX=1;
 // @@ 表示替换整个前缀（不用 /api/v2）
 function rowsUrl(pathTemplate,tableId){
   const p=pathTemplate(tableId);
@@ -242,13 +239,17 @@ function saveCfg(){
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 async function loadTables(){
+  // v1 的 meta 接口在 /api/v1/db/meta 下
+  const metaBase = (await fetchJson(API.url+'/api/v2/meta/bases').catch(()=>null)) ? 'api/v2' : 'api/v1/db';
   let baseId = API.base;
   if(!baseId){
-    const bl = await api('meta/bases');
-    baseId = bl.list?.[0]?.id; localStorage.nc_base = baseId||'';
+    const bl = await fetchJson(API.url+'/'+metaBase+'/meta/bases');
+    baseId = (bl.list?.[0]?.id) || bl[0]?.id; localStorage.nc_base = baseId||'';
   }
-  const tl = await api('meta/bases/'+baseId+'/tables');
-  TABLES = (tl.list||[]).map(t=>({id:t.id, name:t.title, meta:t.meta||{}}));
+  const tl = await fetchJson(API.url+'/'+metaBase+'/meta/bases/'+baseId+'/tables');
+  const tlist = tl.list || tl || [];
+  TABLES = tlist.map(t=>({id:t.id, name:t.title, meta:t.meta||{}}));
+  window.__METABASE__ = metaBase;
   renderTables(); renderHomeTables();
   return TABLES;
 }
@@ -276,9 +277,11 @@ async function openTable(id,title){
   go('query');
   localStorage.nc_last=JSON.stringify({id,title});
   try{
-    const fl = await api('meta/tables/'+id+'/fields');
-    CUR.fields = (fl.list||[]).filter(f=>!['Formula','Rollup','Links','Lookup','Barcode','QRCode'].includes(f.uidt));
-    CUR.pk = (fl.list||[]).find(f=>f.pv)?.title || (fl.list||[]).find(f=>f.pk)?.title || 'Id';
+    const mb = window.__METABASE__ || 'api/v1/db';
+    const fl = await fetchJson(API.url+'/'+mb+'/meta/tables/'+id+'/fields').catch(()=>fetchJson(API.url+'/'+mb+'/meta/tables/'+id));
+    const flist = fl.list || fl || [];
+    CUR.fields = flist.filter(f=>!['Formula','Rollup','Links','Lookup','Barcode','QRCode'].includes(f.uidt));
+    CUR.pk = flist.find(f=>f.pv)?.title || flist.find(f=>f.pk)?.title || flist[0]?.title || 'Id';
     renderChips();
     await loadRows(true);
   }catch(e){ document.getElementById('q-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>' }
@@ -305,17 +308,21 @@ async function loadRows(reset){
       for(let i=0;i<ROW_PATHS.length;i++){
         try{
           await fetchJson(rowsUrl(ROW_PATHS[i],CUR.tableId)+'?limit=1');
-          ROW_PATH_IDX=i; CUR.rowsPath=rowsUrl(ROW_PATHS[i],CUR.tableId); found=true; break;
+    CUR.rowsPath=rowsUrl(ROW_PATHS[i],CUR.tableId); found=true; break;
         }catch(e){ lastErr=e.message; if(i===ROW_PATHS.length-1) throw new Error('所有接口路径均失败：'+lastErr); }
       }
       if(!found) throw new Error(lastErr);
     }
     let u=CUR.rowsPath+'?limit=25&offset='+CUR.offset;
     if(CUR.query) u+='&where=('+encodeURIComponent(CUR.fk||CUR.pk)+',like,'+encodeURIComponent('%'+CUR.query+'%')+')';
-    const d=await api(u);
-    CUR.rows=CUR.rows.concat(d.list||[]);
+    const d=await fetchJson(u);
+    // v1: {list:[...], pageInfo:{...}} 或直接数组
+    const list = Array.isArray(d) ? d : (d.list||[]);
+    const pi = d.pageInfo||{};
+    CUR.rows=CUR.rows.concat(list);
     CUR.offset+=25;
-    renderRows(!(d.pageInfo&&(d.pageInfo.isLastPage??!d.pageInfo.hasNextPage)) && (d.list||[]).length>0);
+    const hasMore = Array.isArray(d) ? list.length===25 : !(pi.isLastPage ?? !pi.hasNextPage) && list.length>0;
+    renderRows(hasMore);
   }catch(e){ document.getElementById('q-list').innerHTML='<div class="empty">'+esc(e.message)+'</div>' }
 }
 function renderRows(hasMore){
